@@ -17,7 +17,7 @@ from aiogram.enums import ParseMode
 BOT_TOKEN = "8623199291:AAFDPTyXvdqbI3VNy3VPTPftHzu_u16hA_4"
 ADMIN_CHAT_ID = -1003800032106
 APPLICATIONS_TOPIC_ID = 5
-WELCOME_LINK = "https://t.me/c/3800032106/1"
+WELCOME_LINK = "https://t.me/+nvVGJ_E4_uI2YWMx"
 
 # ═══════════════════════════════════════════════════════════════
 # 📝 ЛОГИРОВАНИЕ
