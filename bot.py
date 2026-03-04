@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import html
 from datetime import datetime
 from aiogram import Bot, Dispatcher, types, F
 from aiogram.filters import Command
@@ -48,23 +49,31 @@ class ApplicationForm(StatesGroup):
     confirm_application = State()
 
 # ═══════════════════════════════════════════════════════════════
+# 🔧 ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ
+# ═══════════════════════════════════════════════════════════════
+
+def escape_html(text: str) -> str:
+    """Экранирует HTML символы в тексте"""
+    return html.escape(str(text))
+
+# ═══════════════════════════════════════════════════════════════
 # 💬 ТЕКСТЫ СООБЩЕНИЙ
 # ═══════════════════════════════════════════════════════════════
 
 WELCOME_MESSAGE = """
-🖤✨ *Вас приветствует семья B.L.A.C.K.A.N.G.E.L* ✨🖤
+🖤✨ <b>Вас приветствует семья B.L.A.C.K.A.N.G.E.L</b> ✨🖤
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-👋 *Добро пожаловать, путник!*
+👋 <b>Добро пожаловать, путник!</b>
 
 Мы рады, что ты заинтересовался нашей семьёй!
 
-🔥 *B.L.A.C.K.A.N.G.E.L* — это не просто клан или гильдия. Это настоящая семья, где каждый готов поддержать друг друга в любой ситуации!
+🔥 <b>B.L.A.C.K.A.N.G.E.L</b> — это не просто клан или гильдия. Это настоящая семья, где каждый готов поддержать друг друга в любой ситуации!
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-✨ *Что мы предлагаем:*
+✨ <b>Что мы предлагаем:</b>
 
 🤝 Дружный и сплочённый коллектив
 📚 Помощь и обучение новичков  
@@ -74,7 +83,7 @@ WELCOME_MESSAGE = """
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-📜 *Наши принципы:*
+📜 <b>Наши пр��нципы:</b>
 • Уважение к каждому члену семьи
 • Взаимопомощь и поддержка
 • Активность и участие в жизни семьи
@@ -82,18 +91,10 @@ WELCOME_MESSAGE = """
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-📝 *Хочешь стать частью нашей семьи?*
+📝 <b>Хочешь стать частью нашей семьи?</b>
 Нажми кнопку ниже и заполни небольшую анкету!
 
-🖤 *С уважением, семья B.L.A.C.K.A.N.G.E.L* 🖤
-"""
-
-APPLICATION_START_MESSAGE = """
-📝 *Отлично! Давай заполним анкету для вступления в семью!*
-
-ℹ️ Ты можешь отменить заполнение в любой момент командой /cancel
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🖤 <b>С уважением, семья B.L.A.C.K.A.N.G.E.L</b> 🖤
 """
 
 # ═══════════════════════════════════════════════════════════════
@@ -145,7 +146,7 @@ async def cmd_start(message: types.Message, state: FSMContext):
     
     await message.answer(
         WELCOME_MESSAGE,
-        parse_mode=ParseMode.MARKDOWN,
+        parse_mode=ParseMode.HTML,
         reply_markup=get_start_keyboard()
     )
 
@@ -164,23 +165,23 @@ async def cmd_cancel(message: types.Message, state: FSMContext):
     await state.clear()
     
     await message.answer(
-        "❌ *Заполнение анкеты отменено.*\n\n"
+        "❌ <b>Заполнение анкеты отменено.</b>\n\n"
         "Чтобы начать заново, нажмите /start",
-        parse_mode=ParseMode.MARKDOWN
+        parse_mode=ParseMode.HTML
     )
 
 @dp.message(Command("help"))
 async def cmd_help(message: types.Message):
     """Обработчик команды /help"""
     help_text = """
-🆘 *Помощь по боту*
+🆘 <b>Помощь по боту</b>
 
-*Доступные команды:*
+<b>Доступные команды:</b>
 /start - Начать работу с ботом
 /cancel - Отменить заполнение анкеты
 /help - Показать это сообщение
 
-*Как подать заявку:*
+<b>Как подать заявку:</b>
 1. Нажмите /start
 2. Нажмите кнопку "Подать заявку"
 3. Ответьте на все вопросы
@@ -188,9 +189,9 @@ async def cmd_help(message: types.Message):
 
 По всем вопросам обращайтесь к администрации семьи.
 
-🖤 *B.L.A.C.K.A.N.G.E.L*
+🖤 <b>B.L.A.C.K.A.N.G.E.L</b>
 """
-    await message.answer(help_text, parse_mode=ParseMode.MARKDOWN)
+    await message.answer(help_text, parse_mode=ParseMode.HTML)
 
 # ═══════════════════════════════════════════════════════════════
 # 🔘 ОБРАБОТЧИКИ CALLBACK-КНОПОК
@@ -202,7 +203,7 @@ async def back_to_menu(callback: types.CallbackQuery, state: FSMContext):
     await state.clear()
     await callback.message.edit_text(
         WELCOME_MESSAGE,
-        parse_mode=ParseMode.MARKDOWN,
+        parse_mode=ParseMode.HTML,
         reply_markup=get_start_keyboard()
     )
     await callback.answer()
@@ -211,32 +212,32 @@ async def back_to_menu(callback: types.CallbackQuery, state: FSMContext):
 async def show_about(callback: types.CallbackQuery):
     """Информация о семье"""
     about_text = """
-🖤 *О семье B.L.A.C.K.A.N.G.E.L* 🖤
+🖤 <b>О семье B.L.A.C.K.A.N.G.E.L</b> 🖤
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-📅 *Дата основания:* 2024 год
+📅 <b>Дата основания:</b> 2024 год
 
-👥 *Количество участников:* 50+
+👥 <b>Количество участников:</b> 50+
 
-🎯 *Наши цели:*
+🎯 <b>Наши цели:</b>
 • Создание дружного комьюнити
 • Помощь друг другу в игре
 • Совместное развитие
 • Весёлое времяпрепровождение
 
-🏆 *Наши достижения:*
+🏆 <b>Наши достижения:</b>
 • Топ семья сервера
 • Множество побед в ивентах
 • Сплочённый коллектив
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-🖤 *B.L.A.C.K.A.N.G.E.L — Семья превыше всего!*
+🖤 <b>B.L.A.C.K.A.N.G.E.L — Семья превыше всего!</b>
 """
     await callback.message.edit_text(
         about_text,
-        parse_mode=ParseMode.MARKDOWN,
+        parse_mode=ParseMode.HTML,
         reply_markup=get_back_to_menu_keyboard()
     )
     await callback.answer()
@@ -245,24 +246,24 @@ async def show_about(callback: types.CallbackQuery):
 async def show_contact(callback: types.CallbackQuery):
     """Контакты"""
     contact_text = """
-📞 *Связаться с нами*
+📞 <b>Связаться с нами</b>
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 Если у тебя есть вопросы, можешь связаться с администрацией:
 
-👑 *Глава семьи:* @username
-🛡️ *Заместитель:* @username
+👑 <b>Глава семьи:</b> @username
+🛡️ <b>Заместитель:</b> @username
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 Или просто подай заявку, и мы сами с тобой свяжемся!
 
-🖤 *B.L.A.C.K.A.N.G.E.L*
+🖤 <b>B.L.A.C.K.A.N.G.E.L</b>
 """
     await callback.message.edit_text(
         contact_text,
-        parse_mode=ParseMode.MARKDOWN,
+        parse_mode=ParseMode.HTML,
         reply_markup=get_back_to_menu_keyboard()
     )
     await callback.answer()
@@ -272,13 +273,19 @@ async def start_application(callback: types.CallbackQuery, state: FSMContext):
     """Начало заполнения анкеты"""
     await state.clear()
     
-    await callback.message.edit_text(
-        APPLICATION_START_MESSAGE + 
-        "❓ *Вопрос 1 из 6:*\n\n"
-        "🎮 Напиши свой *ник в игре*:",
-        parse_mode=ParseMode.MARKDOWN
-    )
+    text = """
+📝 <b>Отлично! Давай заполним анкету для вступления в семью!</b>
+
+ℹ️ Ты можешь отменить заполнение в любой момент командой /cancel
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+❓ <b>Вопрос 1 из 6:</b>
+
+🎮 Напиши свой <b>ник в игре</b>:
+"""
     
+    await callback.message.edit_text(text, parse_mode=ParseMode.HTML)
     await state.set_state(ApplicationForm.waiting_for_nickname)
     await callback.answer()
 
@@ -288,11 +295,11 @@ async def cancel_application(callback: types.CallbackQuery, state: FSMContext):
     await state.clear()
     
     await callback.message.edit_text(
-        "❌ *Заявка отменена.*\n\n"
+        "❌ <b>Заявка отменена.</b>\n\n"
         "Если передумаешь — возвращайся!\n"
         "Нажми /start чтобы начать заново.\n\n"
-        "🖤 *B.L.A.C.K.A.N.G.E.L*",
-        parse_mode=ParseMode.MARKDOWN
+        "🖤 <b>B.L.A.C.K.A.N.G.E.L</b>",
+        parse_mode=ParseMode.HTML
     )
     await callback.answer()
 
@@ -308,14 +315,14 @@ async def process_nickname(message: types.Message, state: FSMContext):
     if len(nickname) < 2:
         await message.answer(
             "⚠️ Ник слишком короткий. Введи корректный ник:",
-            parse_mode=ParseMode.MARKDOWN
+            parse_mode=ParseMode.HTML
         )
         return
     
     if len(nickname) > 50:
         await message.answer(
             "⚠️ Ник слишком длинный. Введи корректный ник:",
-            parse_mode=ParseMode.MARKDOWN
+            parse_mode=ParseMode.HTML
         )
         return
     
@@ -323,9 +330,9 @@ async def process_nickname(message: types.Message, state: FSMContext):
     
     await message.answer(
         "✅ Отлично!\n\n"
-        "❓ *Вопрос 2 из 6:*\n\n"
-        "👤 Как тебя *зовут*? (твоё имя)",
-        parse_mode=ParseMode.MARKDOWN
+        "❓ <b>Вопрос 2 из 6:</b>\n\n"
+        "👤 Как тебя <b>зовут</b>? (твоё имя)",
+        parse_mode=ParseMode.HTML
     )
     
     await state.set_state(ApplicationForm.waiting_for_name)
@@ -338,24 +345,26 @@ async def process_name(message: types.Message, state: FSMContext):
     if len(name) < 2:
         await message.answer(
             "⚠️ Имя слишком короткое. Введи корректное имя:",
-            parse_mode=ParseMode.MARKDOWN
+            parse_mode=ParseMode.HTML
         )
         return
     
     if len(name) > 50:
         await message.answer(
             "⚠️ Имя слишком длинное. Введи корректное имя:",
-            parse_mode=ParseMode.MARKDOWN
+            parse_mode=ParseMode.HTML
         )
         return
     
     await state.update_data(name=name)
     
+    safe_name = escape_html(name)
+    
     await message.answer(
-        f"✅ Приятно познакомиться, *{name}*!\n\n"
-        "❓ *Вопрос 3 из 6:*\n\n"
-        "📅 *Сколько тебе лет?*",
-        parse_mode=ParseMode.MARKDOWN
+        f"✅ Приятно познакомиться, <b>{safe_name}</b>!\n\n"
+        "❓ <b>Вопрос 3 из 6:</b>\n\n"
+        "📅 <b>Сколько тебе лет?</b>",
+        parse_mode=ParseMode.HTML
     )
     
     await state.set_state(ApplicationForm.waiting_for_age)
@@ -365,11 +374,10 @@ async def process_age(message: types.Message, state: FSMContext):
     """Получаем возраст"""
     age_text = message.text.strip()
     
-    # Проверяем, что это число
     if not age_text.isdigit():
         await message.answer(
-            "⚠️ Пожалуйста, введи возраст *числом*:",
-            parse_mode=ParseMode.MARKDOWN
+            "⚠️ Пожалуйста, введи возраст <b>числом</b>:",
+            parse_mode=ParseMode.HTML
         )
         return
     
@@ -377,8 +385,8 @@ async def process_age(message: types.Message, state: FSMContext):
     
     if age < 10 or age > 100:
         await message.answer(
-            "⚠️ Пожалуйста, введи *реальный* возраст:",
-            parse_mode=ParseMode.MARKDOWN
+            "⚠️ Пожалуйста, введи <b>реальный</b> возраст:",
+            parse_mode=ParseMode.HTML
         )
         return
     
@@ -386,9 +394,9 @@ async def process_age(message: types.Message, state: FSMContext):
     
     await message.answer(
         "✅ Записал!\n\n"
-        "❓ *Вопрос 4 из 6:*\n\n"
-        "⚔️ Какой у тебя *уровень в игре*?",
-        parse_mode=ParseMode.MARKDOWN
+        "❓ <b>Вопрос 4 из 6:</b>\n\n"
+        "⚔️ Какой у тебя <b>уровень в игре</b>?",
+        parse_mode=ParseMode.HTML
     )
     
     await state.set_state(ApplicationForm.waiting_for_level)
@@ -401,7 +409,7 @@ async def process_level(message: types.Message, state: FSMContext):
     if len(level) > 30:
         await message.answer(
             "⚠️ Слишком длинный ответ. Просто напиши свой уровень:",
-            parse_mode=ParseMode.MARKDOWN
+            parse_mode=ParseMode.HTML
         )
         return
     
@@ -409,9 +417,9 @@ async def process_level(message: types.Message, state: FSMContext):
     
     await message.answer(
         "✅ Хороший уровень!\n\n"
-        "❓ *Вопрос 5 из 6:*\n\n"
-        "🏙️ *С какого ты города?*",
-        parse_mode=ParseMode.MARKDOWN
+        "❓ <b>Вопрос 5 из 6:</b>\n\n"
+        "🏙️ <b>С какого ты города?</b>",
+        parse_mode=ParseMode.HTML
     )
     
     await state.set_state(ApplicationForm.waiting_for_city)
@@ -424,14 +432,14 @@ async def process_city(message: types.Message, state: FSMContext):
     if len(city) < 2:
         await message.answer(
             "⚠️ Название города слишком короткое. Введи корректно:",
-            parse_mode=ParseMode.MARKDOWN
+            parse_mode=ParseMode.HTML
         )
         return
     
     if len(city) > 50:
         await message.answer(
             "⚠️ Название города слишком длинное. Введи корректно:",
-            parse_mode=ParseMode.MARKDOWN
+            parse_mode=ParseMode.HTML
         )
         return
     
@@ -439,11 +447,11 @@ async def process_city(message: types.Message, state: FSMContext):
     
     await message.answer(
         "✅ Отлично!\n\n"
-        "❓ *Вопрос 6 из 6 (последний):*\n\n"
-        "👨‍👩‍👧‍👦 *Какое у тебя понимание семьи?*\n\n"
-        "_Напиши, что для тебя значит быть частью игровой семьи, "
-        "чего ты ожидаешь от семьи и что готов дать взамен:_",
-        parse_mode=ParseMode.MARKDOWN
+        "❓ <b>Вопрос 6 из 6 (последний):</b>\n\n"
+        "👨‍👩‍👧‍👦 <b>Какое у тебя понимание семьи?</b>\n\n"
+        "<i>Напиши, что для тебя значит быть частью игровой семьи, "
+        "чего ты ожидаешь от семьи и что готов дать взамен:</i>",
+        parse_mode=ParseMode.HTML
     )
     
     await state.set_state(ApplicationForm.waiting_for_family_understanding)
@@ -456,14 +464,14 @@ async def process_family_understanding(message: types.Message, state: FSMContext
     if len(understanding) < 10:
         await message.answer(
             "⚠️ Пожалуйста, напиши более развёрнутый ответ (минимум 10 символов):",
-            parse_mode=ParseMode.MARKDOWN
+            parse_mode=ParseMode.HTML
         )
         return
     
     if len(understanding) > 1000:
         await message.answer(
             "⚠️ Ответ слишком длинный. Пожалуйста, сократи его:",
-            parse_mode=ParseMode.MARKDOWN
+            parse_mode=ParseMode.HTML
         )
         return
     
@@ -472,21 +480,28 @@ async def process_family_understanding(message: types.Message, state: FSMContext
     # Получаем все данные для предпросмотра
     data = await state.get_data()
     
+    # Экранируем все пользовательские данные
+    safe_nickname = escape_html(data['nickname'])
+    safe_name = escape_html(data['name'])
+    safe_level = escape_html(data['level'])
+    safe_city = escape_html(data['city'])
+    safe_understanding = escape_html(data['family_understanding'])
+    
     preview_text = f"""
-✅ *Отлично! Анкета заполнена!*
+✅ <b>Отлично! Анкета заполнена!</b>
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-📋 *Проверь свои данные:*
+📋 <b>Проверь свои данные:</b>
 
-🎮 *Ник в игре:* {data['nickname']}
-👤 *Имя:* {data['name']}
-📅 *Возраст:* {data['age']} лет
-⚔️ *Уровень:* {data['level']}
-🏙️ *Город:* {data['city']}
+🎮 <b>Ник в игре:</b> {safe_nickname}
+👤 <b>Имя:</b> {safe_name}
+📅 <b>Возраст:</b> {data['age']} лет
+⚔️ <b>Уровень:</b> {safe_level}
+🏙️ <b>Город:</b> {safe_city}
 
-💭 *Понимание семьи:*
-_{data['family_understanding']}_
+💭 <b>Понимание семьи:</b>
+<i>{safe_understanding}</i>
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
@@ -495,7 +510,7 @@ _{data['family_understanding']}_
     
     await message.answer(
         preview_text,
-        parse_mode=ParseMode.MARKDOWN,
+        parse_mode=ParseMode.HTML,
         reply_markup=get_confirm_keyboard()
     )
     
@@ -521,30 +536,37 @@ async def confirm_and_send_application(callback: types.CallbackQuery, state: FSM
     user = callback.from_user
     username = f"@{user.username}" if user.username else "Не указан"
     
+    # Экранируем все пользовательские данные
+    safe_nickname = escape_html(data['nickname'])
+    safe_name = escape_html(data['name'])
+    safe_level = escape_html(data['level'])
+    safe_city = escape_html(data['city'])
+    safe_understanding = escape_html(data['family_understanding'])
+    
     # Формируем текст заявки для администраторов
     application_text = f"""
-🆕 *НОВАЯ ЗАЯВКА В СЕМЬЮ B.L.A.C.K.A.N.G.E.L*
+🆕 <b>НОВАЯ ЗАЯВКА В СЕМЬЮ B.L.A.C.K.A.N.G.E.L</b>
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-👤 *Информация о кандидате:*
+👤 <b>Информация о кандидате:</b>
 
-🎮 *Ник в игре:* {data['nickname']}
-📝 *Имя:* {data['name']}
-📅 *Возраст:* {data['age']} лет
-⚔️ *Уровень:* {data['level']}
-🏙️ *Город:* {data['city']}
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-💭 *Понимание семьи:*
-_{data['family_understanding']}_
+🎮 <b>Ник в игре:</b> {safe_nickname}
+📝 <b>Имя:</b> {safe_name}
+📅 <b>Возраст:</b> {data['age']} лет
+⚔️ <b>Уровень:</b> {safe_level}
+🏙️ <b>Город:</b> {safe_city}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-📱 *Telegram:* {username}
-🆔 *User ID:* `{user.id}`
-📆 *Дата заявки:* {datetime.now().strftime("%d.%m.%Y %H:%M")}
+💭 <b>Понимание семьи:</b>
+<i>{safe_understanding}</i>
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+📱 <b>Telegram:</b> {username}
+🆔 <b>User ID:</b> <code>{user.id}</code>
+📆 <b>Дата заявки:</b> {datetime.now().strftime("%d.%m.%Y %H:%M")}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 """
@@ -554,7 +576,7 @@ _{data['family_understanding']}_
         await bot.send_message(
             chat_id=ADMIN_CHAT_ID,
             text=application_text,
-            parse_mode=ParseMode.MARKDOWN,
+            parse_mode=ParseMode.HTML,
             reply_markup=get_admin_keyboard(user.id)
         )
         
@@ -562,43 +584,43 @@ _{data['family_understanding']}_
         
         # Подтверждение пользователю
         success_text = f"""
-🎉 *Спасибо, {data['name']}! Твоя заявка успешно отправлена!*
+🎉 <b>Спасибо, {safe_name}! Твоя заявка успешно отправлена!</b>
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-📋 *Твоя анкета:*
-• Ник: {data['nickname']}
-• Имя: {data['name']}
+📋 <b>Твоя анкета:</b>
+• Ник: {safe_nickname}
+• Имя: {safe_name}
 • Возраст: {data['age']} лет
-• Уровень: {data['level']}
-• Город: {data['city']}
+• Уровень: {safe_level}
+• Город: {safe_city}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-⏳ *Что дальше?*
+⏳ <b>Что дальше?</b>
 Администрация рассмотрит твою заявку и свяжется с тобой в ближайшее время.
 
 💡 Обычно рассмотрение занимает от нескольких часов до 1-2 дней.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-🖤 *С уважением, семья B.L.A.C.K.A.N.G.E.L* 🖤
+🖤 <b>С уважением, семья B.L.A.C.K.A.N.G.E.L</b> 🖤
 Ожидай ответа! Удачи! 🍀
 """
         
         await callback.message.edit_text(
             success_text,
-            parse_mode=ParseMode.MARKDOWN
+            parse_mode=ParseMode.HTML
         )
         
     except Exception as e:
         logger.error(f"Ошибка отправки заявки: {e}")
         
         await callback.message.edit_text(
-            "❌ *Произошла ошибка при отправке заявки.*\n\n"
+            "❌ <b>Произошла ошибка при отправке заявки.</b>\n\n"
             "Пожалуйста, попробуй позже или свяжись с администратором напрямую.\n\n"
             "Нажми /start чтобы попробовать снова.",
-            parse_mode=ParseMode.MARKDOWN
+            parse_mode=ParseMode.HTML
         )
     
     await state.clear()
@@ -619,33 +641,35 @@ async def accept_application(callback: types.CallbackQuery):
         await bot.send_message(
             chat_id=user_id,
             text="""
-🎉 *ПОЗДРАВЛЯЕМ!* 🎉
+🎉 <b>ПОЗДРАВЛЯЕМ!</b> 🎉
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-✅ Твоя заявка в семью *B.L.A.C.K.A.N.G.E.L* была *ОДОБРЕНА*!
+✅ Твоя заявка в семью <b>B.L.A.C.K.A.N.G.E.L</b> была <b>ОДОБРЕНА</b>!
 
-🖤 *Добро пожаловать в семью!* 🖤
+🖤 <b>Добро пожаловать в семью!</b> 🖤
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-📌 *Что дальше:*
+📌 <b>Что дальше:</b>
 Скоро с тобой свяжется администрация для дальнейших инструкций по вступлению.
 
 Рады видеть тебя в наших рядах! 💪
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-🖤 *B.L.A.C.K.A.N.G.E.L — Семья превыше всего!* 🖤
+🖤 <b>B.L.A.C.K.A.N.G.E.L — Семья превыше всего!</b> 🖤
 """,
-            parse_mode=ParseMode.MARKDOWN
+            parse_mode=ParseMode.HTML
         )
         
         # Обновляем сообщение с заявкой
-        new_text = callback.message.text + f"\n\n✅ *ЗАЯВКА ПРИНЯТА*\n👤 Принял: @{admin.username or admin.first_name}"
+        admin_name = escape_html(admin.username or admin.first_name)
+        new_text = callback.message.text + f"\n\n✅ <b>ЗАЯВКА ПРИНЯТА</b>\n👤 Принял: @{admin_name}"
+        
         await callback.message.edit_text(
             new_text,
-            parse_mode=ParseMode.MARKDOWN
+            parse_mode=ParseMode.HTML
         )
         
         logger.info(f"Заявка пользователя {user_id} принята администратором {admin.id}")
@@ -666,15 +690,15 @@ async def reject_application(callback: types.CallbackQuery):
         await bot.send_message(
             chat_id=user_id,
             text="""
-😔 *К сожалению...*
+😔 <b>К сожалению...</b>
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-❌ Твоя заявка в семью *B.L.A.C.K.A.N.G.E.L* была отклонена.
+❌ Твоя заявка в семью <b>B.L.A.C.K.A.N.G.E.L</b> была отклонена.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-💡 *Возможные причины:*
+💡 <b>Возможные причины:</b>
 • Не соответствие требованиям
 • Недостаточно информации в анкете
 • Другие причины
@@ -685,16 +709,18 @@ async def reject_application(callback: types.CallbackQuery):
 
 Удачи тебе! 🍀
 
-🖤 *B.L.A.C.K.A.N.G.E.L*
+🖤 <b>B.L.A.C.K.A.N.G.E.L</b>
 """,
-            parse_mode=ParseMode.MARKDOWN
+            parse_mode=ParseMode.HTML
         )
         
         # Обновляем сообщение с заявкой
-        new_text = callback.message.text + f"\n\n❌ *ЗАЯВКА ОТКЛОНЕНА*\n👤 Отклонил: @{admin.username or admin.first_name}"
+        admin_name = escape_html(admin.username or admin.first_name)
+        new_text = callback.message.text + f"\n\n❌ <b>ЗАЯВКА ОТКЛОНЕНА</b>\n👤 Отклонил: @{admin_name}"
+        
         await callback.message.edit_text(
             new_text,
-            parse_mode=ParseMode.MARKDOWN
+            parse_mode=ParseMode.HTML
         )
         
         logger.info(f"Заявка пользователя {user_id} отклонена администратором {admin.id}")
@@ -730,7 +756,6 @@ async def on_startup():
     logger.info("🤖 Бот B.L.A.C.K.A.N.G.E.L запускается...")
     logger.info("=" * 50)
     
-    # Проверяем токен
     try:
         bot_info = await bot.get_me()
         logger.info(f"✅ Бот успешно авторизован: @{bot_info.username}")
@@ -738,39 +763,26 @@ async def on_startup():
         logger.error(f"❌ Ошибка авторизации: {e}")
         return
     
-    # Проверяем доступ к чату администраторов
     try:
         await bot.send_message(
             chat_id=ADMIN_CHAT_ID,
-            text="🟢 *Бот B.L.A.C.K.A.N.G.E.L запущен и готов к работе!*\n\n"
+            text=f"🟢 <b>Бот B.L.A.C.K.A.N.G.E.L запущен и готов к работе!</b>\n\n"
                  f"📅 Время запуска: {datetime.now().strftime('%d.%m.%Y %H:%M:%S')}",
-            parse_mode=ParseMode.MARKDOWN
+            parse_mode=ParseMode.HTML
         )
         logger.info(f"✅ Доступ к чату администраторов подтверждён")
     except Exception as e:
         logger.warning(f"⚠️ Не удалось отправить сообщение в чат админов: {e}")
-        logger.warning("Проверьте ADMIN_CHAT_ID и убедитесь, что бот добавлен в чат")
 
 async def on_shutdown():
     """Действия при остановке бота"""
     logger.info("🔴 Бот остановлен")
-    
-    try:
-        await bot.send_message(
-            chat_id=ADMIN_CHAT_ID,
-            text="🔴 *Бот B.L.A.C.K.A.N.G.E.L остановлен*",
-            parse_mode=ParseMode.MARKDOWN
-        )
-    except:
-        pass
 
 async def main():
     """Главная функция запуска"""
-    # Регистрируем хуки
     dp.startup.register(on_startup)
     dp.shutdown.register(on_shutdown)
     
-    # Запускаем бота
     try:
         await dp.start_polling(bot, allowed_updates=dp.resolve_used_update_types())
     finally:
