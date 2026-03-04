@@ -42,9 +42,7 @@ class ApplicationForm(StatesGroup):
     waiting_for_nickname = State()
     waiting_for_name = State()
     waiting_for_age = State()
-    waiting_for_level = State()
-    waiting_for_city = State()
-    waiting_for_family_understanding = State()
+    waiting_for_phone = State()
     confirm_application = State()
 
 # ═══════════════════════════════════════════════════════════════
@@ -54,7 +52,7 @@ class ApplicationForm(StatesGroup):
 def escape_html(text: str) -> str:
     return html.escape(str(text))
 
-def get_progress(step: int, total: int = 6) -> str:
+def get_progress(step: int, total: int = 4) -> str:
     return f"{'🔹' * step}{'▫️' * (total - step)}"
 
 # ═══════════════════════════════════════════════════════════════
@@ -238,7 +236,7 @@ async def start_application(callback: types.CallbackQuery, state: FSMContext):
     text = f"""
 📝 <b>Анкета кандидата</b>
 
-{progress} <i>Вопрос 1 из 6</i>
+{progress} <i>Вопрос 1 из 4</i>
 
 
 🎮 <b>Твой ник в игре?</b>
@@ -296,7 +294,7 @@ async def process_nickname(message: types.Message, state: FSMContext):
     text = f"""
 📝 <b>Анкета кандидата</b>
 
-{progress} <i>Вопрос 2 из 6</i>
+{progress} <i>Вопрос 2 из 4</i>
 
 ✅ Ник: <code>{escape_html(nickname)}</code>
 
@@ -328,7 +326,7 @@ async def process_name(message: types.Message, state: FSMContext):
     text = f"""
 📝 <b>Анкета кандидата</b>
 
-{progress} <i>Вопрос 3 из 6</i>
+{progress} <i>Вопрос 3 из 4</i>
 
 ✅ Ник: <code>{escape_html(data['nickname'])}</code>
 ✅ Имя: <code>{escape_html(name)}</code>
@@ -367,108 +365,33 @@ async def process_age(message: types.Message, state: FSMContext):
     text = f"""
 📝 <b>Анкета кандидата</b>
 
-{progress} <i>Вопрос 4 из 6</i>
+{progress} <i>Последний вопрос!</i>
 
 ✅ Ник: <code>{escape_html(data['nickname'])}</code>
 ✅ Имя: <code>{escape_html(data['name'])}</code>
 ✅ Возраст: <code>{age} лет</code>
 
 
-⚔️ <b>Какой у тебя уровень?</b>
+📱 <b>Твой номер телефона в игре?</b>
 
-Напиши свой уровень в игре
+Напиши свой игровой номер телефона
 """
     
     await message.answer(text, parse_mode=ParseMode.HTML, reply_markup=get_cancel_keyboard())
-    await state.set_state(ApplicationForm.waiting_for_level)
+    await state.set_state(ApplicationForm.waiting_for_phone)
 
-@dp.message(ApplicationForm.waiting_for_level)
-async def process_level(message: types.Message, state: FSMContext):
+@dp.message(ApplicationForm.waiting_for_phone)
+async def process_phone(message: types.Message, state: FSMContext):
     if message.chat.type != "private":
         return
     
-    level = message.text.strip()
+    phone = message.text.strip()
     
-    if len(level) > 30:
-        await message.answer("⚠️ Слишком длинный ответ")
+    if len(phone) < 2 or len(phone) > 30:
+        await message.answer("⚠️ Некорректный номер телефона")
         return
     
-    await state.update_data(level=level)
-    data = await state.get_data()
-    
-    progress = get_progress(5)
-    
-    text = f"""
-📝 <b>Анкета кандидата</b>
-
-{progress} <i>Вопрос 5 из 6</i>
-
-✅ Ник: <code>{escape_html(data['nickname'])}</code>
-✅ Имя: <code>{escape_html(data['name'])}</code>
-✅ Возраст: <code>{data['age']} лет</code>
-✅ Уровень: <code>{escape_html(level)}</code>
-
-
-🏙 <b>С какого ты города?</b>
-
-Напиши название города
-"""
-    
-    await message.answer(text, parse_mode=ParseMode.HTML, reply_markup=get_cancel_keyboard())
-    await state.set_state(ApplicationForm.waiting_for_city)
-
-@dp.message(ApplicationForm.waiting_for_city)
-async def process_city(message: types.Message, state: FSMContext):
-    if message.chat.type != "private":
-        return
-    
-    city = message.text.strip()
-    
-    if len(city) < 2 or len(city) > 50:
-        await message.answer("⚠️ Некорректное название города")
-        return
-    
-    await state.update_data(city=city)
-    data = await state.get_data()
-    
-    progress = get_progress(6)
-    
-    text = f"""
-📝 <b>Анкета кандидата</b>
-
-{progress} <i>Последний вопрос!</i>
-
-✅ Ник: <code>{escape_html(data['nickname'])}</code>
-✅ Имя: <code>{escape_html(data['name'])}</code>
-✅ Возраст: <code>{data['age']} лет</code>
-✅ Уровень: <code>{escape_html(data['level'])}</code>
-✅ Город: <code>{escape_html(city)}</code>
-
-
-💭 <b>Что для тебя значит семья?</b>
-
-Напиши, что ожидаешь от семьи и что готов дать взамен
-"""
-    
-    await message.answer(text, parse_mode=ParseMode.HTML, reply_markup=get_cancel_keyboard())
-    await state.set_state(ApplicationForm.waiting_for_family_understanding)
-
-@dp.message(ApplicationForm.waiting_for_family_understanding)
-async def process_family_understanding(message: types.Message, state: FSMContext):
-    if message.chat.type != "private":
-        return
-    
-    understanding = message.text.strip()
-    
-    if len(understanding) < 10:
-        await message.answer("⚠️ Напиши подробнее (минимум 10 символов)")
-        return
-    
-    if len(understanding) > 1000:
-        await message.answer("⚠️ Слишком длинно (максимум 1000 символов)")
-        return
-    
-    await state.update_data(family_understanding=understanding)
+    await state.update_data(phone=phone)
     data = await state.get_data()
     
     preview_text = f"""
@@ -480,12 +403,7 @@ async def process_family_understanding(message: types.Message, state: FSMContext
 🎮 Ник: <code>{escape_html(data['nickname'])}</code>
 👤 Имя: <code>{escape_html(data['name'])}</code>
 📅 Возраст: <code>{data['age']} лет</code>
-⚔️ Уровень: <code>{escape_html(data['level'])}</code>
-🏙 Город: <code>{escape_html(data['city'])}</code>
-
-
-💭 <b>О семье:</b>
-<i>{escape_html(understanding)}</i>
+📱 Телефон в игре: <code>{escape_html(phone)}</code>
 
 
 ⚡ <b>Всё верно?</b>
@@ -525,12 +443,7 @@ async def confirm_and_send_application(callback: types.CallbackQuery, state: FSM
 🎮 Ник: <code>{escape_html(data['nickname'])}</code>
 📝 Имя: <code>{escape_html(data['name'])}</code>
 📅 Возраст: <code>{data['age']} лет</code>
-⚔️ Уровень: <code>{escape_html(data['level'])}</code>
-🏙 Город: <code>{escape_html(data['city'])}</code>
-
-
-💭 <b>О семье:</b>
-<i>{escape_html(data['family_understanding'])}</i>
+📱 Телефон в игре: <code>{escape_html(data['phone'])}</code>
 
 
 📱 <b>Контакт:</b>
