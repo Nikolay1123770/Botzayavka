@@ -3,36 +3,27 @@ import logging
 import html
 from datetime import datetime
 from aiogram import Bot, Dispatcher, types, F
-from aiogram.filters import Command, ChatMemberUpdatedFilter, IS_MEMBER, IS_NOT_MEMBER
+from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.fsm.storage.memory import MemoryStorage
-from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, ChatMemberUpdated
+from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from aiogram.enums import ParseMode
 
 # ═══════════════════════════════════════════════════════════════
 # ⚙️ НАСТРОЙКИ
 # ═══════════════════════════════════════════════════════════════
 
-BOT_TOKEN = "8623199291:AAFDPTyXvdqbI3VNy3VPTPftHzu_u16hA_4"  # Токен от @BotFather
-
-# ID группы (добавьте -100 перед числом из ссылки)
+BOT_TOKEN = "8623199291:AAFDPTyXvdqbI3VNy3VPTPftHzu_u16hA_4"
 ADMIN_CHAT_ID = -1003800032106
-
-# ID топика для заявок (число после последнего / в ссылке)
 APPLICATIONS_TOPIC_ID = 5
-
-# Ссылка на раздел для принятых участников
 WELCOME_LINK = "https://t.me/c/3800032106/1"
 
 # ═══════════════════════════════════════════════════════════════
 # 📝 ЛОГИРОВАНИЕ
 # ═══════════════════════════════════════════════════════════════
 
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
+logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # ═══════════════════════════════════════════════════════════════
@@ -57,146 +48,90 @@ class ApplicationForm(StatesGroup):
     confirm_application = State()
 
 # ═══════════════════════════════════════════════════════════════
-# 🎨 ДЕКОРАТИВНЫЕ ЭЛЕМЕНТЫ
+# 🎨 ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ
 # ═══════════════════════════════════════════════════════════════
 
 def escape_html(text: str) -> str:
-    """Экранирует HTML символы"""
     return html.escape(str(text))
 
-def get_progress_bar(step: int, total: int = 6) -> str:
-    """Создаёт красивый прогресс-бар"""
-    filled = "▰" * step
-    empty = "▱" * (total - step)
-    percentage = int((step / total) * 100)
-    return f"{filled}{empty} {percentage}%"
-
-def get_step_indicator(step: int, total: int = 6) -> str:
-    """Индикатор шагов"""
-    steps = ""
-    for i in range(1, total + 1):
-        if i < step:
-            steps += "✅"
-        elif i == step:
-            steps += "📝"
-        else:
-            steps += "⬜"
-    return steps
+def get_progress(step: int, total: int = 6) -> str:
+    return f"{'🔹' * step}{'▫️' * (total - step)}"
 
 # ═══════════════════════════════════════════════════════════════
 # 💬 ТЕКСТЫ СООБЩЕНИЙ
 # ═══════════════════════════════════════════════════════════════
 
 WELCOME_MESSAGE = """
-<b>┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓</b>
-<b>┃</b>  🖤 <b>B.L.A.C.K.A.N.G.E.L</b> 🖤  <b>┃</b>
-<b>┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛</b>
+🖤 <b>B.L.A.C.K.A.N.G.E.L</b> 🖤
 
-         ⚔️ <i>Семья • Честь • Сила</i> ⚔️
+⚔️ <i>Семья • Честь • Сила</i>
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Приветствуем тебя, воин! 👋
 
-👋 <b>Приветствуем тебя, воин!</b>
+Ты стоишь у врат легендарной семьи, где рождаются легенды и куются нерушимые узы братства.
 
-Ты находишься у врат легендарной семьи
-<b>B.L.A.C.K.A.N.G.E.L</b> — места, где рождаются
-легенды и куются нерушимые узы братства!
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🏆 <b>Что мы предлагаем:</b>
 
-<b>🏆 ЧТО МЫ ПРЕДЛАГАЕМ:</b>
+🤝 Братство единомышленников
+⚔️ Совместные победы
+📚 Обучение и развитие
+💬 Общение 24/7
+🎁 Эксклюзивные ивенты
+👑 Путь к величию
 
-   🤝 Братство единомышленников
-   ⚔️ Совместные победы и битвы
-   📚 Обучение и развитие
-   💬 Общение 24/7
-   🎁 Эксклюзивные ивенты
-   👑 Путь к величию
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📜 <b>Наш кодекс:</b>
 
-<b>📜 КОДЕКС ЧЕСТИ:</b>
+◈ Уважение к каждому брату
+◈ Верность семье
+◈ Честь в бою и жизни
+◈ Взаимопомощь
 
-   ◈ Уважение к каждому брату
-   ◈ Верность семье превыше всего
-   ◈ Честь в бою и в жизни
-   ◈ Взаимопомощь без границ
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-<b>⚡ Готов стать частью легенды?</b>
-<i>Нажми кнопку ниже и докажи свою доблесть!</i>
-
-<b>┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓</b>
-<b>┃</b>    🖤 <i>Семья превыше всего</i> 🖤    <b>┃</b>
-<b>┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛</b>
+⚡ <b>Готов стать частью легенды?</b>
 """
 
 ABOUT_MESSAGE = """
-<b>┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓</b>
-<b>┃</b>   📖 <b>ИСТОРИЯ СЕМЬИ</b> 📖   <b>┃</b>
-<b>┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛</b>
+📖 <b>О семье B.L.A.C.K.A.N.G.E.L</b>
 
-<b>🖤 B.L.A.C.K.A.N.G.E.L 🖤</b>
+📅 Основание: 2024 год
+👥 Численность: 50+ воинов
+🏆 Статус: Элитная семья
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-<b>📅 Основание:</b> 2024 год
-<b>👥 Численность:</b> 50+ воинов
-<b>🏆 Статус:</b> Элитная семья
+⚔️ <b>Наши достижения:</b>
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🥇 Топ семья сервера
+🏆 Победители турниров
+⭐ 100+ совместных побед
+💎 Элитный состав
 
-<b>⚔️ НАШИ ДОСТИЖЕНИЯ:</b>
-
-   🥇 Топ-1 семья сервера
-   🏆 Победители турниров
-   ⭐ 100+ совместных побед
-   💎 Элитный состав игроков
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-<b>🎯 НАШИ ПРИНЦИПЫ:</b>
-
-   ◈ Один за всех, все за одного
-   ◈ Никогда не бросаем своих
-   ◈ Честная игра
-   ◈ Постоянное развитие
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 <i>«В единстве — наша сила,
 В братстве — наша победа»</i>
 
-<b>🖤 B.L.A.C.K.A.N.G.E.L 🖤</b>
+🖤 <b>B.L.A.C.K.A.N.G.E.L</b>
 """
 
 CONTACT_MESSAGE = """
-<b>┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓</b>
-<b>┃</b>   📞 <b>СВЯЗЬ С НАМИ</b> 📞   <b>┃</b>
-<b>┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛</b>
+📞 <b>Связь с нами</b>
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-<b>👑 РУКОВОДСТВО СЕМЬИ:</b>
+👑 <b>Руководство:</b>
 
-   🔱 <b>Глава:</b> @username
-   ⚔️ <b>Зам. главы:</b> @username
-   🛡️ <b>Офицеры:</b> @username
+🔱 Глава: @username
+⚔️ Зам: @username
+🛡️ Офицер: @username
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-<b>💡 КАК СВЯЗАТЬСЯ:</b>
+💡 <b>Как связаться:</b>
 
-   📝 Подай заявку через бота
-   💬 Напиши руководству в ЛС
-   ⏰ Время ответа: до 24 часов
+📝 Подай заявку через бота
+💬 Напиши руководству в ЛС
+⏰ Ответ: до 24 часов
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-<i>Мы всегда рады новым воинам!</i>
-
-<b>🖤 B.L.A.C.K.A.N.G.E.L 🖤</b>
+🖤 <b>B.L.A.C.K.A.N.G.E.L</b>
 """
 
 # ═══════════════════════════════════════════════════════════════
@@ -205,38 +140,37 @@ CONTACT_MESSAGE = """
 
 def get_start_keyboard():
     return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="⚔️ ПОДАТЬ ЗАЯВКУ ⚔️", callback_data="apply")],
+        [InlineKeyboardButton(text="⚔️ Подать заявку", callback_data="apply")],
         [
             InlineKeyboardButton(text="📖 О семье", callback_data="about"),
             InlineKeyboardButton(text="📞 Контакты", callback_data="contact")
-        ],
-        [InlineKeyboardButton(text="❓ Помощь", callback_data="help")]
+        ]
     ])
 
 def get_confirm_keyboard():
     return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="✅ ОТПРАВИТЬ ЗАЯВКУ", callback_data="confirm_send")],
-        [InlineKeyboardButton(text="🔄 Заполнить заново", callback_data="apply")],
-        [InlineKeyboardButton(text="❌ Отменить", callback_data="cancel_application")]
+        [InlineKeyboardButton(text="✅ Отправить", callback_data="confirm_send")],
+        [InlineKeyboardButton(text="🔄 Заново", callback_data="apply")],
+        [InlineKeyboardButton(text="❌ Отмена", callback_data="cancel_application")]
     ])
 
 def get_admin_keyboard(user_id: int):
     return InlineKeyboardMarkup(inline_keyboard=[
         [
-            InlineKeyboardButton(text="✅ ПРИНЯТЬ", callback_data=f"accept_{user_id}"),
-            InlineKeyboardButton(text="❌ ОТКЛОНИТЬ", callback_data=f"reject_{user_id}")
+            InlineKeyboardButton(text="✅ Принять", callback_data=f"accept_{user_id}"),
+            InlineKeyboardButton(text="❌ Отклонить", callback_data=f"reject_{user_id}")
         ],
-        [InlineKeyboardButton(text="💬 Написать кандидату", url=f"tg://user?id={user_id}")]
+        [InlineKeyboardButton(text="💬 Написать", url=f"tg://user?id={user_id}")]
     ])
 
 def get_back_keyboard():
     return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="🔙 Назад в меню", callback_data="back_to_menu")]
+        [InlineKeyboardButton(text="🔙 Назад", callback_data="back_to_menu")]
     ])
 
 def get_cancel_keyboard():
     return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="❌ Отменить заполнение", callback_data="cancel_application")]
+        [InlineKeyboardButton(text="❌ Отмена", callback_data="cancel_application")]
     ])
 
 # ═══════════════════════════════════════════════════════════════
@@ -245,13 +179,10 @@ def get_cancel_keyboard():
 
 @dp.message(Command("start"))
 async def cmd_start(message: types.Message, state: FSMContext):
-    # Игнорируем сообщения из групп
     if message.chat.type != "private":
         return
     
     await state.clear()
-    logger.info(f"Пользователь {message.from_user.id} запустил бота")
-    
     await message.answer(
         WELCOME_MESSAGE,
         parse_mode=ParseMode.HTML,
@@ -263,51 +194,8 @@ async def cmd_cancel(message: types.Message, state: FSMContext):
     if message.chat.type != "private":
         return
     
-    current_state = await state.get_state()
-    
-    if current_state is None:
-        await message.answer(
-            "🤷 Нечего отменять.\nНажми /start чтобы начать."
-        )
-        return
-    
     await state.clear()
-    await message.answer(
-        "❌ <b>Заполнение отменено</b>\n\n"
-        "Нажми /start чтобы начать заново.",
-        parse_mode=ParseMode.HTML
-    )
-
-@dp.message(Command("help"))
-async def cmd_help(message: types.Message):
-    if message.chat.type != "private":
-        return
-    
-    help_text = """
-<b>┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓</b>
-<b>┃</b>   ❓ <b>ПОМОЩЬ</b> ❓   <b>┃</b>
-<b>┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛</b>
-
-<b>📜 КОМАНДЫ:</b>
-
-   /start — Главное меню
-   /cancel — Отменить заполнение
-   /help — Эта справка
-
-<b>📝 КАК ПОДАТЬ ЗАЯВКУ:</b>
-
-   1️⃣ Нажми "Подать заявку"
-   2️⃣ Ответь на 6 вопросов
-   3️⃣ Проверь данные
-   4️⃣ Подтверди отправку
-   5️⃣ Жди ответа!
-
-<b>⏰ СРОКИ:</b>
-   Рассмотрение: 1-24 часа
-
-<b>🖤 B.L.A.C.K.A.N.G.E.L 🖤</b>
-"""
-    await message.answer(help_text, parse_mode=ParseMode.HTML, reply_markup=get_back_keyboard())
+    await message.answer("❌ Отменено\n\nНажми /start чтобы начать")
 
 # ═══════════════════════════════════════════════════════════════
 # 🔘 CALLBACK ОБРАБОТЧИКИ
@@ -341,63 +229,21 @@ async def show_contact(callback: types.CallbackQuery):
     )
     await callback.answer()
 
-@dp.callback_query(F.data == "help")
-async def show_help(callback: types.CallbackQuery):
-    help_text = """
-<b>┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓</b>
-<b>┃</b>   ❓ <b>ПОМОЩЬ</b> ❓   <b>┃</b>
-<b>┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛</b>
-
-<b>📝 КАК ПОДАТЬ ЗАЯВКУ:</b>
-
-   1️⃣ Нажми "Подать заявку"
-   2️⃣ Ответь на 6 вопросов
-   3️⃣ Проверь данные
-   4️⃣ Подтверди отправку
-   5️⃣ Жди ответа!
-
-<b>⏰ СРОКИ РАССМОТРЕНИЯ:</b>
-   От 1 часа до 24 часов
-
-<b>💡 СОВЕТЫ:</b>
-   ◈ Отвечай честно
-   ◈ Пиши подробно
-   ◈ Будь собой!
-
-<b>🖤 B.L.A.C.K.A.N.G.E.L 🖤</b>
-"""
-    await callback.message.edit_text(
-        help_text,
-        parse_mode=ParseMode.HTML,
-        reply_markup=get_back_keyboard()
-    )
-    await callback.answer()
-
 @dp.callback_query(F.data == "apply")
 async def start_application(callback: types.CallbackQuery, state: FSMContext):
     await state.clear()
     
-    step = 1
-    progress = get_progress_bar(step)
-    steps = get_step_indicator(step)
+    progress = get_progress(1)
     
     text = f"""
-<b>┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓</b>
-<b>┃</b>   📝 <b>АНКЕТА КАНДИДАТА</b> 📝   <b>┃</b>
-<b>┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛</b>
+📝 <b>Анкета кандидата</b>
 
-{steps}
-<b>{progress}</b>
+{progress} <i>Вопрос 1 из 6</i>
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-<b>❓ ВОПРОС {step} ИЗ 6</b>
+🎮 <b>Твой ник в игре?</b>
 
-🎮 <b>Как тебя зовут в игре?</b>
-
-<i>Напиши свой игровой никнейм:</i>
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Напиши свой игровой никнейм
 """
     
     await callback.message.edit_text(
@@ -406,25 +252,19 @@ async def start_application(callback: types.CallbackQuery, state: FSMContext):
         reply_markup=get_cancel_keyboard()
     )
     await state.set_state(ApplicationForm.waiting_for_nickname)
-    await callback.answer("📝 Начинаем заполнение анкеты!")
+    await callback.answer("📝 Заполняем анкету!")
 
 @dp.callback_query(F.data == "cancel_application")
 async def cancel_application(callback: types.CallbackQuery, state: FSMContext):
     await state.clear()
     
     text = """
-<b>┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓</b>
-<b>┃</b>   ❌ <b>ОТМЕНЕНО</b> ❌   <b>┃</b>
-<b>┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛</b>
+❌ <b>Отменено</b>
 
 Заполнение анкеты отменено.
+Если передумаешь — возвращайся!
 
-<i>Если передумаешь — возвращайся!
-Мы всегда рады новым воинам.</i>
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-<b>🖤 B.L.A.C.K.A.N.G.E.L 🖤</b>
+🖤 <b>B.L.A.C.K.A.N.G.E.L</b>
 """
     
     await callback.message.edit_text(
@@ -432,7 +272,7 @@ async def cancel_application(callback: types.CallbackQuery, state: FSMContext):
         parse_mode=ParseMode.HTML,
         reply_markup=get_back_keyboard()
     )
-    await callback.answer("❌ Заявка отменена")
+    await callback.answer()
 
 # ═══════════════════════════════════════════════════════════════
 # 📝 ОБРАБОТЧИКИ АНКЕТЫ
@@ -446,40 +286,24 @@ async def process_nickname(message: types.Message, state: FSMContext):
     nickname = message.text.strip()
     
     if len(nickname) < 2 or len(nickname) > 50:
-        await message.answer(
-            "⚠️ <b>Некорректный ник!</b>\n"
-            "Длина должна быть от 2 до 50 символов.",
-            parse_mode=ParseMode.HTML
-        )
+        await message.answer("⚠️ Ник должен быть от 2 до 50 символов")
         return
     
     await state.update_data(nickname=nickname)
     
-    step = 2
-    progress = get_progress_bar(step)
-    steps = get_step_indicator(step)
+    progress = get_progress(2)
     
     text = f"""
-<b>┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓</b>
-<b>┃</b>   📝 <b>АНКЕТА КАНДИДАТА</b> 📝   <b>┃</b>
-<b>┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛</b>
+📝 <b>Анкета кандидата</b>
 
-{steps}
-<b>{progress}</b>
+{progress} <i>Вопрос 2 из 6</i>
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+✅ Ник: <code>{escape_html(nickname)}</code>
 
-✅ <b>Ник:</b> <code>{escape_html(nickname)}</code>
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-<b>❓ ВОПРОС {step} ИЗ 6</b>
 
 👤 <b>Как тебя зовут?</b>
 
-<i>Напиши своё реальное имя:</i>
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Напиши своё имя
 """
     
     await message.answer(text, parse_mode=ParseMode.HTML, reply_markup=get_cancel_keyboard())
@@ -493,42 +317,26 @@ async def process_name(message: types.Message, state: FSMContext):
     name = message.text.strip()
     
     if len(name) < 2 or len(name) > 50:
-        await message.answer(
-            "⚠️ <b>Некорректное имя!</b>\n"
-            "Длина должна быть от 2 до 50 символов.",
-            parse_mode=ParseMode.HTML
-        )
+        await message.answer("⚠️ Имя должно быть от 2 до 50 символов")
         return
     
     await state.update_data(name=name)
     data = await state.get_data()
     
-    step = 3
-    progress = get_progress_bar(step)
-    steps = get_step_indicator(step)
+    progress = get_progress(3)
     
     text = f"""
-<b>┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓</b>
-<b>┃</b>   📝 <b>АНКЕТА КАНДИДАТА</b> 📝   <b>┃</b>
-<b>┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛</b>
+📝 <b>Анкета кандидата</b>
 
-{steps}
-<b>{progress}</b>
+{progress} <i>Вопрос 3 из 6</i>
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+✅ Ник: <code>{escape_html(data['nickname'])}</code>
+✅ Имя: <code>{escape_html(name)}</code>
 
-✅ <b>Ник:</b> <code>{escape_html(data['nickname'])}</code>
-✅ <b>Имя:</b> <code>{escape_html(name)}</code>
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-<b>❓ ВОПРОС {step} ИЗ 6</b>
 
 📅 <b>Сколько тебе лет?</b>
 
-<i>Напиши свой возраст числом:</i>
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Напиши свой возраст
 """
     
     await message.answer(text, parse_mode=ParseMode.HTML, reply_markup=get_cancel_keyboard())
@@ -542,51 +350,33 @@ async def process_age(message: types.Message, state: FSMContext):
     age_text = message.text.strip()
     
     if not age_text.isdigit():
-        await message.answer(
-            "⚠️ <b>Введи возраст числом!</b>",
-            parse_mode=ParseMode.HTML
-        )
+        await message.answer("⚠️ Введи возраст числом")
         return
     
     age = int(age_text)
     
     if age < 10 or age > 100:
-        await message.answer(
-            "⚠️ <b>Введи реальный возраст!</b>",
-            parse_mode=ParseMode.HTML
-        )
+        await message.answer("⚠️ Введи реальный возраст")
         return
     
     await state.update_data(age=age)
     data = await state.get_data()
     
-    step = 4
-    progress = get_progress_bar(step)
-    steps = get_step_indicator(step)
+    progress = get_progress(4)
     
     text = f"""
-<b>┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓</b>
-<b>┃</b>   📝 <b>АНКЕТА КАНДИДАТА</b> 📝   <b>┃</b>
-<b>┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛</b>
+📝 <b>Анкета кандидата</b>
 
-{steps}
-<b>{progress}</b>
+{progress} <i>Вопрос 4 из 6</i>
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+✅ Ник: <code>{escape_html(data['nickname'])}</code>
+✅ Имя: <code>{escape_html(data['name'])}</code>
+✅ Возраст: <code>{age} лет</code>
 
-✅ <b>Ник:</b> <code>{escape_html(data['nickname'])}</code>
-✅ <b>Имя:</b> <code>{escape_html(data['name'])}</code>
-✅ <b>Возраст:</b> <code>{age} лет</code>
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+⚔️ <b>Какой у тебя уровень?</b>
 
-<b>❓ ВОПРОС {step} ИЗ 6</b>
-
-⚔️ <b>Какой у тебя уровень в игре?</b>
-
-<i>Напиши свой текущий уровень:</i>
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Напиши свой уровень в игре
 """
     
     await message.answer(text, parse_mode=ParseMode.HTML, reply_markup=get_cancel_keyboard())
@@ -600,43 +390,28 @@ async def process_level(message: types.Message, state: FSMContext):
     level = message.text.strip()
     
     if len(level) > 30:
-        await message.answer(
-            "⚠️ <b>Слишком длинный ответ!</b>",
-            parse_mode=ParseMode.HTML
-        )
+        await message.answer("⚠️ Слишком длинный ответ")
         return
     
     await state.update_data(level=level)
     data = await state.get_data()
     
-    step = 5
-    progress = get_progress_bar(step)
-    steps = get_step_indicator(step)
+    progress = get_progress(5)
     
     text = f"""
-<b>┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓</b>
-<b>┃</b>   📝 <b>АНКЕТА КАНДИДАТА</b> 📝   <b>┃</b>
-<b>┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛</b>
+📝 <b>Анкета кандидата</b>
 
-{steps}
-<b>{progress}</b>
+{progress} <i>Вопрос 5 из 6</i>
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+✅ Ник: <code>{escape_html(data['nickname'])}</code>
+✅ Имя: <code>{escape_html(data['name'])}</code>
+✅ Возраст: <code>{data['age']} лет</code>
+✅ Уровень: <code>{escape_html(level)}</code>
 
-✅ <b>Ник:</b> <code>{escape_html(data['nickname'])}</code>
-✅ <b>Имя:</b> <code>{escape_html(data['name'])}</code>
-✅ <b>Возраст:</b> <code>{data['age']} лет</code>
-✅ <b>Уровень:</b> <code>{escape_html(level)}</code>
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🏙 <b>С какого ты города?</b>
 
-<b>❓ ВОПРОС {step} ИЗ 6</b>
-
-🏙️ <b>С какого ты города?</b>
-
-<i>Напиши название своего города:</i>
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Напиши название города
 """
     
     await message.answer(text, parse_mode=ParseMode.HTML, reply_markup=get_cancel_keyboard())
@@ -650,46 +425,29 @@ async def process_city(message: types.Message, state: FSMContext):
     city = message.text.strip()
     
     if len(city) < 2 or len(city) > 50:
-        await message.answer(
-            "⚠️ <b>Некорректное название города!</b>",
-            parse_mode=ParseMode.HTML
-        )
+        await message.answer("⚠️ Некорректное название города")
         return
     
     await state.update_data(city=city)
     data = await state.get_data()
     
-    step = 6
-    progress = get_progress_bar(step)
-    steps = get_step_indicator(step)
+    progress = get_progress(6)
     
     text = f"""
-<b>┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓</b>
-<b>┃</b>   📝 <b>АНКЕТА КАНДИДАТА</b> 📝   <b>┃</b>
-<b>┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛</b>
+📝 <b>Анкета кандидата</b>
 
-{steps}
-<b>{progress}</b>
+{progress} <i>Последний вопрос!</i>
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+✅ Ник: <code>{escape_html(data['nickname'])}</code>
+✅ Имя: <code>{escape_html(data['name'])}</code>
+✅ Возраст: <code>{data['age']} лет</code>
+✅ Уровень: <code>{escape_html(data['level'])}</code>
+✅ Город: <code>{escape_html(city)}</code>
 
-✅ <b>Ник:</b> <code>{escape_html(data['nickname'])}</code>
-✅ <b>Имя:</b> <code>{escape_html(data['name'])}</code>
-✅ <b>Возраст:</b> <code>{data['age']} лет</code>
-✅ <b>Уровень:</b> <code>{escape_html(data['level'])}</code>
-✅ <b>Город:</b> <code>{escape_html(city)}</code>
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+💭 <b>Что для тебя значит семья?</b>
 
-<b>❓ ПОСЛЕДНИЙ ВОПРОС!</b>
-
-👨‍👩‍👧‍👦 <b>Что для тебя значит семья?</b>
-
-<i>Напиши, что для тебя значит быть частью
-игровой семьи, чего ожидаешь и что
-готов дать взамен:</i>
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Напиши, что ожидаешь от семьи и что готов дать взамен
 """
     
     await message.answer(text, parse_mode=ParseMode.HTML, reply_markup=get_cancel_keyboard())
@@ -703,60 +461,34 @@ async def process_family_understanding(message: types.Message, state: FSMContext
     understanding = message.text.strip()
     
     if len(understanding) < 10:
-        await message.answer(
-            "⚠️ <b>Напиши более развёрнутый ответ!</b>\n"
-            "<i>Минимум 10 символов</i>",
-            parse_mode=ParseMode.HTML
-        )
+        await message.answer("⚠️ Напиши подробнее (минимум 10 символов)")
         return
     
     if len(understanding) > 1000:
-        await message.answer(
-            "⚠️ <b>Слишком длинный ответ!</b>\n"
-            "<i>Сократи до 1000 символов</i>",
-            parse_mode=ParseMode.HTML
-        )
+        await message.answer("⚠️ Слишком длинно (максимум 1000 символов)")
         return
     
     await state.update_data(family_understanding=understanding)
     data = await state.get_data()
     
-    # Экранируем данные
-    safe_nickname = escape_html(data['nickname'])
-    safe_name = escape_html(data['name'])
-    safe_level = escape_html(data['level'])
-    safe_city = escape_html(data['city'])
-    safe_understanding = escape_html(understanding)
-    
     preview_text = f"""
-<b>┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓</b>
-<b>┃</b>   ✅ <b>АНКЕТА ЗАПОЛНЕНА!</b> ✅   <b>┃</b>
-<b>┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛</b>
+✅ <b>Анкета заполнена!</b>
 
-✅✅✅✅✅✅
-<b>▰▰▰▰▰▰ 100%</b>
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📋 <b>Проверь данные:</b>
 
-<b>📋 ТВОЯ АНКЕТА:</b>
+🎮 Ник: <code>{escape_html(data['nickname'])}</code>
+👤 Имя: <code>{escape_html(data['name'])}</code>
+📅 Возраст: <code>{data['age']} лет</code>
+⚔️ Уровень: <code>{escape_html(data['level'])}</code>
+🏙 Город: <code>{escape_html(data['city'])}</code>
 
-   🎮 <b>Ник:</b> <code>{safe_nickname}</code>
-   👤 <b>Имя:</b> <code>{safe_name}</code>
-   📅 <b>Возраст:</b> <code>{data['age']} лет</code>
-   ⚔️ <b>Уровень:</b> <code>{safe_level}</code>
-   🏙️ <b>Город:</b> <code>{safe_city}</code>
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+💭 <b>О семье:</b>
+<i>{escape_html(understanding)}</i>
 
-<b>💭 ПОНИМАНИЕ СЕМЬИ:</b>
 
-<i>{safe_understanding}</i>
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-<b>⚡ Всё верно? Отправляем?</b>
-
-<b>🖤 B.L.A.C.K.A.N.G.E.L 🖤</b>
+⚡ <b>Всё верно?</b>
 """
     
     await message.answer(
@@ -776,55 +508,38 @@ async def confirm_and_send_application(callback: types.CallbackQuery, state: FSM
     data = await state.get_data()
     
     if not data:
-        await callback.message.edit_text(
-            "❌ Ошибка! Данные не найдены.\nНажми /start"
-        )
+        await callback.message.edit_text("❌ Ошибка! Нажми /start")
         await callback.answer()
         return
     
     user = callback.from_user
-    username = f"@{user.username}" if user.username else "Не указан"
-    
-    # Экранируем данные
-    safe_nickname = escape_html(data['nickname'])
-    safe_name = escape_html(data['name'])
-    safe_level = escape_html(data['level'])
-    safe_city = escape_html(data['city'])
-    safe_understanding = escape_html(data['family_understanding'])
+    username = f"@{user.username}" if user.username else "Нет username"
     
     # Заявка для админов
     application_text = f"""
-<b>┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓</b>
-<b>┃</b>  🆕 <b>НОВАЯ ЗАЯВКА</b> 🆕  <b>┃</b>
-<b>┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛</b>
+🆕 <b>Новая заявка</b>
 
-<b>👤 ДАННЫЕ КАНДИДАТА:</b>
 
-   🎮 <b>Ник:</b> <code>{safe_nickname}</code>
-   📝 <b>Имя:</b> <code>{safe_name}</code>
-   📅 <b>Возраст:</b> <code>{data['age']} лет</code>
-   ⚔️ <b>Уровень:</b> <code>{safe_level}</code>
-   🏙️ <b>Город:</b> <code>{safe_city}</code>
+👤 <b>Кандидат:</b>
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🎮 Ник: <code>{escape_html(data['nickname'])}</code>
+📝 Имя: <code>{escape_html(data['name'])}</code>
+📅 Возраст: <code>{data['age']} лет</code>
+⚔️ Уровень: <code>{escape_html(data['level'])}</code>
+🏙 Город: <code>{escape_html(data['city'])}</code>
 
-<b>💭 ПОНИМАНИЕ СЕМЬИ:</b>
 
-<i>{safe_understanding}</i>
+💭 <b>О семье:</b>
+<i>{escape_html(data['family_understanding'])}</i>
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-<b>📱 КОНТАКТ:</b>
-
-   👤 <b>Telegram:</b> {username}
-   🆔 <b>ID:</b> <code>{user.id}</code>
-   📆 <b>Дата:</b> {datetime.now().strftime("%d.%m.%Y %H:%M")}
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📱 <b>Контакт:</b>
+{username}
+ID: <code>{user.id}</code>
+🕐 {datetime.now().strftime("%d.%m.%Y %H:%M")}
 """
     
     try:
-        # Отправляем в топик заявок
         await bot.send_message(
             chat_id=ADMIN_CHAT_ID,
             message_thread_id=APPLICATIONS_TOPIC_ID,
@@ -833,60 +548,37 @@ async def confirm_and_send_application(callback: types.CallbackQuery, state: FSM
             reply_markup=get_admin_keyboard(user.id)
         )
         
-        logger.info(f"Заявка от {user.id} отправлена")
-        
-        # Подтверждение пользователю
         success_text = f"""
-<b>┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓</b>
-<b>┃</b>  🎉 <b>ЗАЯВКА ОТПРАВЛЕНА!</b> 🎉  <b>┃</b>
-<b>┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛</b>
+🎉 <b>Заявка отправлена!</b>
 
-<b>Спасибо, {safe_name}!</b>
+Спасибо, <b>{escape_html(data['name'])}</b>!
 
-Твоя заявка успешно отправлена
-на рассмотрение руководству семьи.
+Твоя заявка отправлена на рассмотрение руководству семьи.
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-<b>⏳ ЧТО ДАЛЬШЕ:</b>
+⏳ <b>Что дальше:</b>
 
-   📋 Заявка на рассмотрении
-   ⏰ Срок: от 1 до 24 часов
-   📱 Уведомим тебя о решении
+📋 Заявка рассматривается
+⏰ Срок: 1-24 часа
+📱 Уведомим тебя о решении
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-<b>💡 СОВЕТ:</b>
-Не отключай уведомления, чтобы
-не пропустить наш ответ!
+💡 Не отключай уведомления!
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-<i>Желаем удачи, воин!</i> ⚔️
-
-<b>🖤 B.L.A.C.K.A.N.G.E.L 🖤</b>
+🖤 <b>B.L.A.C.K.A.N.G.E.L</b>
 """
         
-        await callback.message.edit_text(
-            success_text,
-            parse_mode=ParseMode.HTML
-        )
+        await callback.message.edit_text(success_text, parse_mode=ParseMode.HTML)
         
     except Exception as e:
-        logger.error(f"Ошибка отправки: {e}")
-        
-        await callback.message.edit_text(
-            "❌ <b>Ошибка отправки!</b>\n\n"
-            "Попробуй позже или свяжись с админом.\n"
-            "Нажми /start",
-            parse_mode=ParseMode.HTML
-        )
+        logger.error(f"Ошибка: {e}")
+        await callback.message.edit_text("❌ Ошибка отправки!\n\nПопробуй позже или напиши /start")
     
     await state.clear()
-    await callback.answer("✅ Заявка отправлена!")
+    await callback.answer("✅ Отправлено!")
 
 # ═══════════════════════════════════════════════════════════════
-# 👑 ОБРАБОТКА РЕШЕНИЙ АДМИНОВ
+# 👑 РЕШЕНИЯ АДМИНОВ
 # ═══════════════════════════════════════════════════════════════
 
 @dp.callback_query(F.data.startswith("accept_"))
@@ -895,42 +587,28 @@ async def accept_application(callback: types.CallbackQuery):
     admin = callback.from_user
     
     try:
-        # Уведомление пользователю о принятии
         accept_text = f"""
-<b>┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓</b>
-<b>┃</b>  🎉 <b>ПОЗДРАВЛЯЕМ!</b> 🎉  <b>┃</b>
-<b>┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛</b>
+🎉 <b>Поздравляем!</b>
 
-   ✅ <b>ТВОЯ ЗАЯВКА ОДОБРЕНА!</b>
+Твоя заявка в семью <b>B.L.A.C.K.A.N.G.E.L</b> одобрена!
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Добро пожаловать в семью! 🖤
 
-🖤 <b>Добро пожаловать в семью
-   B.L.A.C.K.A.N.G.E.L!</b> 🖤
 
-Ты стал частью легенды!
+🔗 <b>Ссылка для вступления:</b>
+👉 <a href="{WELCOME_LINK}">Нажми сюда</a>
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-<b>🔗 ССЫЛКА ДЛЯ ВСТУПЛЕНИЯ:</b>
+📌 <b>Важно:</b>
 
-👉 <a href="{WELCOME_LINK}">НАЖМИ СЮДА</a> 👈
+◈ Прочитай правила
+◈ Представься в чате
+◈ Добавь тег семьи в ник
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-<b>📌 ВАЖНО:</b>
+Вместе мы — сила! 💪
 
-   ◈ Прочитай правила семьи
-   ◈ Представься в чате
-   ◈ Добавь тег семьи в ник
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-<i>Рады видеть тебя в наших рядах!</i>
-<i>Вместе мы — сила!</i> 💪
-
-<b>🖤 B.L.A.C.K.A.N.G.E.L 🖤</b>
-<b>⚔️ Семья • Честь • Сила ⚔️</b>
+🖤 <b>B.L.A.C.K.A.N.G.E.L</b>
 """
         
         await bot.send_message(
@@ -940,21 +618,15 @@ async def accept_application(callback: types.CallbackQuery):
             disable_web_page_preview=True
         )
         
-        # Обновляем сообщение с заявкой
         admin_name = escape_html(admin.username or admin.first_name)
-        new_text = callback.message.text + f"\n\n✅ <b>ПРИНЯТО</b>\n👤 Принял: @{admin_name}\n⏰ {datetime.now().strftime('%d.%m.%Y %H:%M')}"
+        new_text = callback.message.text + f"\n\n✅ <b>Принято</b> — @{admin_name}"
         
-        await callback.message.edit_text(
-            new_text,
-            parse_mode=ParseMode.HTML
-        )
-        
-        logger.info(f"Заявка {user_id} принята админом {admin.id}")
-        await callback.answer("✅ Заявка принята! Кандидат уведомлён.", show_alert=True)
+        await callback.message.edit_text(new_text, parse_mode=ParseMode.HTML)
+        await callback.answer("✅ Принято!", show_alert=True)
         
     except Exception as e:
-        logger.error(f"Ошибка при принятии: {e}")
-        await callback.answer("❌ Не удалось уведомить пользователя", show_alert=True)
+        logger.error(f"Ошибка: {e}")
+        await callback.answer("❌ Не удалось уведомить", show_alert=True)
 
 @dp.callback_query(F.data.startswith("reject_"))
 async def reject_application(callback: types.CallbackQuery):
@@ -962,39 +634,25 @@ async def reject_application(callback: types.CallbackQuery):
     admin = callback.from_user
     
     try:
-        # Уведомление пользователю об отказе
         reject_text = """
-<b>┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓</b>
-<b>┃</b>  😔 <b>К СОЖАЛЕНИЮ...</b> 😔  <b>┃</b>
-<b>┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛</b>
+😔 <b>К сожалению...</b>
 
-   ❌ <b>ТВОЯ ЗАЯВКА ОТКЛОНЕНА</b>
+Твоя заявка в семью <b>B.L.A.C.K.A.N.G.E.L</b> отклонена.
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-<b>💡 ВОЗМОЖНЫЕ ПРИЧИНЫ:</b>
+💡 <b>Возможные причины:</b>
 
-   ◈ Недостаточный уровень
-   ◈ Неполная анкета
-   ◈ Другие причины
+◈ Недостаточный уровень
+◈ Неполная анкета
+◈ Другие причины
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-<b>📝 ЧТО ДЕЛАТЬ:</b>
+📝 Ты можешь подать заявку позже, когда будешь готов.
 
-Ты можешь подать заявку повторно
-через некоторое время, когда:
+Не расстраивайся!
+Двери открыты для достойных. 🍀
 
-   ◈ Повысишь уровень
-   ◈ Заполнишь анкету подробнее
-   ◈ Подготовишься лучше
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-<i>Не расстраивайся!
-Двери всегда открыты для достойных.</i>
-
-<b>🖤 B.L.A.C.K.A.N.G.E.L 🖤</b>
+🖤 <b>B.L.A.C.K.A.N.G.E.L</b>
 """
         
         await bot.send_message(
@@ -1003,65 +661,36 @@ async def reject_application(callback: types.CallbackQuery):
             parse_mode=ParseMode.HTML
         )
         
-        # Обновляем сообщение с заявкой
         admin_name = escape_html(admin.username or admin.first_name)
-        new_text = callback.message.text + f"\n\n❌ <b>ОТКЛОНЕНО</b>\n👤 Отклонил: @{admin_name}\n⏰ {datetime.now().strftime('%d.%m.%Y %H:%M')}"
+        new_text = callback.message.text + f"\n\n❌ <b>Отклонено</b> — @{admin_name}"
         
-        await callback.message.edit_text(
-            new_text,
-            parse_mode=ParseMode.HTML
-        )
-        
-        logger.info(f"Заявка {user_id} отклонена админом {admin.id}")
-        await callback.answer("❌ Заявка отклонена. Кандидат уведомлён.", show_alert=True)
+        await callback.message.edit_text(new_text, parse_mode=ParseMode.HTML)
+        await callback.answer("❌ Отклонено!", show_alert=True)
         
     except Exception as e:
-        logger.error(f"Ошибка при отклонении: {e}")
-        await callback.answer("❌ Не удалось уведомить пользователя", show_alert=True)
+        logger.error(f"Ошибка: {e}")
+        await callback.answer("❌ Не удалось уведомить", show_alert=True)
 
 # ═══════════════════════════════════════════════════════════════
-# 🚫 ИГНОРИРУЕМ СООБЩЕНИЯ В ГРУППАХ
+# 🚫 ИГНОР ГРУПП
 # ═══════════════════════════════════════════════════════════════
 
 @dp.message()
-async def handle_other_messages(message: types.Message, state: FSMContext):
-    # Игнорируем все сообщения из групп
+async def handle_other(message: types.Message, state: FSMContext):
     if message.chat.type != "private":
         return
     
     current_state = await state.get_state()
-    
     if current_state is None:
-        await message.answer(
-            "🤔 Не понимаю команду.\n\n"
-            "Нажми /start чтобы начать."
-        )
+        await message.answer("👋 Нажми /start")
 
 # ═══════════════════════════════════════════════════════════════
 # 🚀 ЗАПУСК
 # ═══════════════════════════════════════════════════════════════
 
-async def on_startup():
-    logger.info("=" * 50)
-    logger.info("🖤 Бот B.L.A.C.K.A.N.G.E.L запускается...")
-    logger.info("=" * 50)
-    
-    try:
-        bot_info = await bot.get_me()
-        logger.info(f"✅ Бот: @{bot_info.username}")
-    except Exception as e:
-        logger.error(f"❌ Ошибка: {e}")
-
 async def main():
-    dp.startup.register(on_startup)
-    
-    try:
-        await dp.start_polling(bot, allowed_updates=dp.resolve_used_update_types())
-    finally:
-        await bot.session.close()
+    logger.info("🖤 Бот B.L.A.C.K.A.N.G.E.L запущен!")
+    await dp.start_polling(bot)
 
 if __name__ == "__main__":
-    try:
-        asyncio.run(main())
-    except KeyboardInterrupt:
-        logger.info("Бот остановлен")
+    asyncio.run(main())
